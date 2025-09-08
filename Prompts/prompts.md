@@ -642,3 +642,394 @@ end note
 * **Scope explícito**: El *note* inferior delimita claramente lo incluido vs. excluido en el MVP.
 
 Si quieres, lo evoluciono a una **versión MVP+** (añadiendo matching básico, cancelaciones, y feedback 1-clic) o preparo el **diagrama C4** complementario (Contexto/Contenedores) para alinear arquitectura con estos casos.
+
+## Xavier Vergés Berga
+
+Propon un diagrama lean canvas
+
+## ChatGPT 5
+
+¡Genial 🚀! Un **Lean Canvas** es perfecto para aterrizar la propuesta de una app de **covoituraje corporativo**. Te propongo un primer borrador adaptado al **MVP** que definimos antes:
+
+---
+
+# 📊 Lean Canvas – App de Covoituraje Corporativo
+
+| **Bloque**                           | **Contenido**                                                                                                                                                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Problema**                         | - Empleados con costes elevados de transporte (gasolina, parking, peajes).<br>- Falta de alternativas de movilidad sostenible en trayectos casa–trabajo.<br>- Baja tasa de ocupación de vehículos.<br>- Empresas necesitan reducir huella de carbono y mejorar bienestar laboral.                       |
+| **Segmentos de clientes**            | - **Primario**: Empleados de la compañía (conductores y pasajeros).<br>- **Secundario**: Departamento de RR.HH. y Sostenibilidad (informes y métricas).                                                                                                                                                 |
+| **Propuesta de valor única**         | - Plataforma **interna y segura** para que empleados compartan coche fácilmente.<br>- **Reducción de costes** y **mejora de la comodidad** en desplazamientos.<br>- **Impacto ambiental positivo** (menos CO₂, menos coches en parking).<br>- **Integración corporativa** (SSO, calendarios, intranet). |
+| **Solución (MVP)**                   | - Login corporativo.<br>- Perfil mínimo (zona, rol, horarios).<br>- Publicar viajes (conductor).<br>- Buscar y reservar viajes (pasajero).<br>- Notificación básica de confirmación.                                                                                                                    |
+| **Canales**                          | - Comunicación interna: intranet, newsletter, cartelería en oficinas.<br>- Lanzamiento piloto con embajadores internos.<br>- App web/mobile accesible con SSO.<br>- Integración con Teams/Slack para notificaciones.                                                                                    |
+| **Fuentes de ingresos / Beneficios** | - No monetario en primera fase.<br>- **Beneficio para empresa**: reducción de costes de parking, incentivos fiscales, imagen sostenible.<br>- **Beneficio para empleados**: ahorro en gasolina, parking, tiempo, networking.                                                                            |
+| **Estructura de costes**             | - Desarrollo inicial (MVP app).<br>- Mantenimiento y servidores.<br>- Soporte IT y gestión de incidencias.<br>- Campañas internas de adopción.<br>- Evolución funcional (matching avanzado, métricas CO₂, gamificación).                                                                                |
+| **Métricas clave**                   | - Nº de empleados registrados.<br>- % de empleados activos (viajes/semana).<br>- Nº medio de ocupantes por coche.<br>- CO₂ evitado (km compartidos).<br>- Tasa de repetición (viajes recurrentes).                                                                                                      |
+| **Ventaja competitiva**              | - Solución **propia y adaptada a cultura interna**, sin depender de terceros.<br>- **Privacidad y control de datos** (cumple GDPR, datos internos).<br>- Integración con sistemas corporativos (SSO, calendario, RR.HH.).<br>- Posibilidad de alinear con **incentivos internos** (beneficios, RSC).    |
+
+---
+
+📌 Con este **Lean Canvas** ya se puede presentar la idea a dirección o RR.HH. para justificar el MVP.
+
+¿Quieres que te lo prepare también en **formato PlantUML** (para generar el diagrama visual) o en **PDF listo para presentación**?
+
+
+## Prompt
+
+dame una arquitectura amplia del sistema!
+
+## ChatGPT 5
+
+¡Vamos a por una **arquitectura amplia** del sistema de covoituraje corporativo! Te la doy en capas (visión C4) + decisiones técnicas clave, para que puedas aterrizar rápido un MVP escalable.
+
+# 1) Visión general (C1 – Contexto)
+
+* **Usuarios internos**: Empleados (Conductores/Pasajeros), RRHH/Sostenibilidad, Facilities/Seguridad.
+* **Plataforma**: App Web/Móvil (SPA + API), Servicios de dominio (Viajes, Matching, Reservas, Notificaciones), Data Platform.
+* **Sistemas externos**: SSO corporativo (OIDC/SAML), correo/Push, mapas/geocoding, calendario corporativo (MS/Google), herramientas BI.
+
+```plantuml
+@startuml
+title C1 – Contexto: Covoituraje Corporativo
+
+left to right direction
+skinparam rectangle {
+  BackgroundColor #EEF5FF
+  BorderColor #6A88A6
+  RoundCorner 12
+}
+
+actor "Empleado\n(Conductor/Pasajero)" as EMP
+actor "RRHH / Sostenibilidad" as HR
+actor "Facilities / Seguridad" as SEC
+
+rectangle "Plataforma Covoituraje\n(Dominio Empresa)" as SYS {
+  rectangle "Front-end Web/Móvil (SPA)" as FE
+  rectangle "Back-end API\n(Servicios de dominio)" as BE
+  rectangle "Data Platform\n(Analytics/BI + DWH)" as DWH
+}
+
+cloud "SSO / IdP\n(OIDC/SAML)" as IDP
+cloud "Email / Push\n(SES/FCM/APNs)" as MSG
+cloud "Mapas / Geocoding\n(Google/OSM)" as MAPS
+cloud "Calendario\n(365/Google)" as CAL
+cloud "BI Corporativo" as BIC
+
+EMP --> FE : Usa
+HR --> BIC : Consume informes
+SEC --> FE : Consola moderación
+
+FE --> BE : REST/GraphQL
+FE --> IDP : Login SSO
+BE --> MAPS : Geocoding/ETA/Routing
+BE --> CAL : Eventos (opcional)
+BE --> MSG : Notificaciones
+BE --> DWH : Eventos/ETL
+DWH --> BIC : Dataset
+
+@enduml
+```
+
+# 2) Contenedores (C2 – Containers)
+
+* **Front-end**: SPA (React/TS) + PWA; autenticación OIDC; mapas embebidos.
+* **API Gateway**: edge auth, rate limit, routing.
+* **Servicios de Dominio** (k8s/containers):
+
+  * **Users/Profiles** (perfil, preferencias, sedes).
+  * **Trips** (trayectos publicados, plantillas, recurrentes).
+  * **Matching** (búsqueda/score por ruta, franja, desvío).
+  * **Booking** (reservas, estado, lista espera simple).
+  * **Notifications** (email/push, plantillas).
+  * **Analytics Event Bus** (ingesta eventos a DWH).
+* **Persistencia**:
+
+  * **OLTP**: PostgreSQL (normalizado + índices geográficos, pgRouting/earthdistance).
+  * **Cache**: Redis (búsquedas recientes, sesiones).
+  * **Search**: OpenSearch/Elastic (geoterms, texto libre).
+* **Data Platform**:
+
+  * Lago/DWH (BigQuery/Snowflake/Redshift) + Orquestación (Airflow/dbt).
+* **Observabilidad**: Prometheus/Grafana + OpenTelemetry + ELK.
+
+```plantuml
+@startuml
+title C2 – Contenedores principales
+
+skinparam rectangle {
+  BackgroundColor #F8FBFF
+  BorderColor #7A94AE
+  RoundCorner 12
+}
+left to right direction
+
+node "Cliente" {
+  rectangle "SPA Web/PWA\n(React/TS)" as SPA
+  rectangle "App Mobile (Opc.)\nCapacitor/React Native" as MOB
+}
+
+cloud "API Gateway\n(ingress + WAF + OIDC)" as GW
+
+package "Servicios de Dominio" as SVC {
+  rectangle "Users & Profiles\n(REST)" as USERS
+  rectangle "Trips Service\n(REST)" as TRIPS
+  rectangle "Matching Service\n(REST/Async)" as MATCH
+  rectangle "Booking Service\n(REST)" as BOOK
+  rectangle "Notifications\n(Workers)" as NOTIF
+  rectangle "Admin Console\n(RRHH/Seguridad)" as ADMIN
+}
+
+package "Data & Infra" as DATA {
+  database "PostgreSQL\n(OLTP + PostGIS)" as PG
+  rectangle "Redis\n(Cache/Sessions)" as REDIS
+  rectangle "Search\n(Elastic/OpenSearch)" as ES
+  queue "Event Bus\n(Kafka/RabbitMQ)" as BUS
+  database "DWH/Lake\n(dbx/BigQuery/Snowflake)" as DWH
+}
+
+cloud "SSO/IdP" as IDP
+cloud "Email/Push" as MSG
+cloud "Mapas/Geocoding" as GEO
+cloud "Calendario" as CAL
+
+SPA --> GW
+MOB --> GW
+GW --> USERS
+GW --> TRIPS
+GW --> MATCH
+GW --> BOOK
+GW --> ADMIN
+
+USERS --> PG
+TRIPS --> PG
+BOOK --> PG
+MATCH --> PG
+MATCH --> ES
+USERS --> REDIS
+MATCH --> REDIS
+
+NOTIF --> MSG
+TRIPS --> GEO
+BOOK --> CAL : opcional
+
+' eventos
+TRIPS --> BUS : TripCreated / TripUpdated
+BOOK --> BUS : BookingCreated / BookingCancelled
+MATCH --> BUS : MatchComputed
+NOTIF --> BUS : NotificationSent
+BUS --> DWH
+
+' auth
+SPA --> IDP
+GW --> IDP
+
+@enduml
+```
+
+# 3) Componentes clave (C3 – ejemplo de dominio)
+
+### 3.1 Booking/Matching (núcleo funcional)
+
+* **Matching Engine**
+
+  * Entrada: `Trip`, `PassengerRequest`, preferencias.
+  * Scoring: distancia/tiempo de desvío, franja horaria, afinidades (no fumador, etc.).
+  * Output: lista ordenada de coincidencias.
+  * **Modo MVP**: filtro por sede + franja; **Modo avanzado**: matriz costo-tiempo + heurística.
+* **Booking Orchestrator**
+
+  * Reserva inmediata si hay plaza; transición de estado (Pending→Confirmed→Completed/NoShow).
+  * Re-matching simple ante cancelación de conductor.
+* **Availability/Quota**
+
+  * Control de plazas, lista de espera opcional.
+* **Notification Trigger**
+
+  * Hooks ante `BookingConfirmed`, recordatorios T-60/T-15.
+
+```plantuml
+@startuml
+title C3 – Componentes: Matching & Booking
+
+package "Matching Service" {
+  component "Match API" as MATCH_API
+  component "Scoring Engine\n(Haversine / ETA / reglas)" as SCORER
+  component "Geo Index\n(Elastic Geo/Redis Geo)" as GEOIDX
+}
+
+package "Booking Service" {
+  component "Booking API" as BOOK_API
+  component "Orchestrator\n(Sagas / TX outbox)" as ORCH
+  component "State Machine\n(Reserva)" as FSM
+}
+
+database "Trips/Users (PG)" as PG
+queue "Event Bus" as BUS
+component "Notification Worker" as NTF
+
+MATCH_API --> SCORER
+SCORER --> GEOIDX
+SCORER --> PG
+BOOK_API --> ORCH
+ORCH --> FSM
+ORCH --> PG
+ORCH --> BUS : BookingCreated/Cancelled
+BUS --> NTF
+@enduml
+```
+
+# 4) Modelo de datos (esqueleto mínimo)
+
+* **User**(id, emailCorp, nombre, dept, sedeId, zonaOrigen{lat,lng|zip}, prefs{smoker,music,silence,lang}, roles{driver, rider}, createdAt)
+* **Vehicle**(id, userId, plazas, maletero, etiquetaEco?, insuranceOk)
+* **Trip**(id, driverId, origin{lat,lng|zip}, destination{sedeId}, dateTime, seatsTotal, seatsFree, desviomax, recurrent{pattern}, status)
+* **Booking**(id, tripId, passengerId, status{PENDING,CONFIRMED,CANCELLED,COMPLETED,NOSHOW}, createdAt)
+* **Rating**(id, fromUserId, toUserId, tripId, thumbs{up/down}, tags\[])
+* **Event**(id, type, payload\_json, occurredAt) → para outbox/ETL
+
+Índices: geoespaciales en `Trip.origin`, compuestos por `destination, dateTime`, y `booking(tripId,status)`.
+
+# 5) API (contratos resumidos)
+
+* `POST /auth/oidc/callback` (gateway)
+* `GET /users/me` / `PUT /users/me` (perfil/prefs)
+* `POST /trips` / `GET /trips?destination=sede&from=08:00&to=09:00`
+* `POST /bookings` (tripId) / `DELETE /bookings/{id}`
+* `GET /matches?destination=sede&time=08:30&zip=08025`
+* Webhooks internos: `BookingConfirmed`, `TripCancelled` → Notifications.
+
+# 6) Seguridad, privacidad, cumplimiento
+
+* **SSO** (OIDC/SAML), **RBAC** (Empleado, Admin RRHH, Moderador Seguridad).
+* **Datos mínimos**: zona (zip/barrio) en vez de dirección exacta; compartir ubicación **temporal**.
+* **Cifrado** en tránsito (TLS) y en reposo (KMS).
+* **Consentimiento** y retención de datos (política RGPD); **pseudonimización** para analítica.
+* **Auditoría**: acceso a datos sensibles y acciones administrativas.
+
+# 7) Fiabilidad y escalabilidad
+
+* **Idempotencia** (reservas, notificaciones), **Outbox pattern** para eventos.
+* **Rate limiting** y **circuit breakers** en integraciones externas.
+* **Escalado independiente** de Matching/Booking; **colas** para trabajos costosos (re-matching, envíos).
+* **Blue/Green** o **Canary** deploys, **migraciones** con zero-downtime (Liquibase/Flyway).
+
+# 8) Observabilidad y soporte
+
+* **Logs estructurados** (correlationId, userId), **tracing** distribuido (OTEL), **métricas** (p95 matching time, booking success rate).
+* **Dashboards** por servicio, **alertas** (SLOs: disponibilidad API, latencia, tasa de errores).
+* **Runbooks** para incidentes (p. ej., picos de demanda por lluvia/huelga).
+
+# 9) Decisiones de diseño (resumen)
+
+* **Arquitectura modular**: empezar con **monolito modular** (Spring Boot/Quarkus + módulos) o 3–4 servicios bien definidos; evolucionar a microservicios si el uso lo justifica.
+* **PostgreSQL + PostGIS** para queries geográficas sencillas; **Elastic/OpenSearch** si necesitas búsqueda por texto/geo avanzada a gran escala.
+* **Redis** como caché de proximidad y sesiones OIDC.
+* **Event-driven** para analítica y notificaciones desacopladas.
+
+---
+
+Si quieres, te genero:
+
+* Los **YAMLs de k8s** (Deployments/Ingress/HPAs).
+* Un **`docker-compose.yml`** de dev (PG, Redis, OpenSearch, Keycloak como IdP).
+* Los **esquemas OpenAPI** base (`/trips`, `/bookings`, `/matches`) para arrancar el backend.
+
+
+## Prompt
+
+Ahora, cambiando de rol al de un arquitecto de software experimentado, renderiza un diagrama entidad-relación en mermaid.
+
+## ChatGPT 5
+
+Aquí tienes un **diagrama entidad-relación (ER)** en **Mermaid** para el MVP de covoituraje corporativo. Incluye las entidades clave y sus relaciones (conductor/pasajero), sedes, vehículos, reservas y valoraciones. He usado alias para representar los dos roles del usuario en `RATING` (emisor y receptor).
+
+```mermaid
+erDiagram
+    USER ||--o{ VEHICLE : "posee"
+    USER ||--o{ TRIP : "conduce"
+    USER ||--o{ BOOKING : "hace (como pasajero)"
+    TRIP ||--o{ BOOKING : "recibe reservas"
+    SEDE ||--o{ TRIP : "destino"
+    USER ||--o{ RATING : "emite"
+    USER ||--o{ RATING : "recibe"
+
+    USER {
+      uuid id PK
+      string email_corp  "único"
+      string nombre
+      string departamento
+      uuid   sede_id FK
+      string zona_origen "barrio/CP (no dirección exacta)"
+      json   preferencias "smoker,music,silence,lang"
+      boolean es_conductor
+      boolean es_pasajero
+      timestamp created_at
+    }
+
+    SEDE {
+      uuid  id PK
+      string nombre
+      string direccion
+      float  lat
+      float  lng
+      string timezone
+      timestamp created_at
+    }
+
+    VEHICLE {
+      uuid  id PK
+      uuid  user_id FK
+      string marca_modelo
+      int    plazas
+      boolean maletero
+      string etiqueta_eco
+      boolean seguro_ok
+      timestamp created_at
+    }
+
+    TRIP {
+      uuid  id PK
+      uuid  driver_id FK "-> USER.id"
+      float origin_lat
+      float origin_lng
+      uuid  destination_sede_id FK "-> SEDE.id"
+      datetime salida_dt
+      int    plazas_totales
+      int    plazas_libres
+      int    desvio_max_km
+      boolean recurrente
+      string  recurrencia_cron "opcional"
+      string  estado "PLANNED|CANCELLED|DONE"
+      timestamp created_at
+    }
+
+    BOOKING {
+      uuid  id PK
+      uuid  trip_id FK
+      uuid  pasajero_id FK "-> USER.id"
+      string estado "PENDING|CONFIRMED|CANCELLED|COMPLETED|NOSHOW"
+      timestamp created_at
+      timestamp updated_at
+    }
+
+    RATING {
+      uuid  id PK
+      uuid  from_user_id FK "emisor -> USER.id"
+      uuid  to_user_id   FK "receptor -> USER.id"
+      uuid  trip_id      FK
+      boolean thumbs_up
+      string[] tags "puntual,comodo,desvio_alto..."
+      string  comentario
+      timestamp created_at
+    }
+```
+
+### Notas rápidas de diseño
+
+* `USER` se relaciona con `TRIP` como **conductor** y con `BOOKING` como **pasajero**.
+* `SEDE` es el **destino corporativo** (puedes añadir sedes secundarias si hace falta).
+* `TRIP.origin_*` guarda coordenadas; para privacidad, el usuario solo declara **zona** en su perfil.
+* `RATING` referencia a `USER` dos veces (`from_user_id` y `to_user_id`) para distinguir emisor/receptor.
+* Estados sugeridos: `TRIP.estado` y `BOOKING.estado` cubren el ciclo básico del viaje/reserva.
+
+¿Quieres que lo convierta a **schema.prisma**, **DDL SQL (PostgreSQL + PostGIS)** o un **diagrama de clases UML** a partir de este ER?
